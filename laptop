@@ -161,3 +161,16 @@ if ! exenv versions | grep -Fq "$elixir_version"; then
 fi
 
 exenv global "$elixir_version"
+
+fancy_echo "Configuring Python ..."
+find_latest_python() {
+  pyenv install -l | grep -v - | tail -1 | sed -e 's/^ *//'
+}
+python_version="$(find_latest_python)"
+append_to_zshrc 'eval "$(pyenv init -)"'
+eval "$(pyenv init -)"
+if ! pyenv versions | grep -Fq "$python_version"; then
+  pyenv install "$python_version"
+fi
+pyenv global "$python_version"
+pyenv shell "$python_version"
