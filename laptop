@@ -127,19 +127,21 @@ brew "postgres", restart_service: true
 brew "redis", restart_service: true
 EOF
 
-fancy_echo "Setting up dotfiles..."
+fancy_echo "Setting up dotfiles ..."
 
 if [ ! -d "$HOME/.dotfiles/" ]; then
   git clone git@github.com:ianagne/dotfiles.git $HOME/.dotfiles
 fi
+
 rcup
 
-fancy_echo "Symlinking neovim configuration..."
+fancy_echo "Symlinking neovim configuration ..."
 
 mkdir -p ${XDG_CONFIG_HOME:=$HOME/.config}
 if [ ! -L "$XDG_CONFIG_HOME/nvim" ]; then
   ln -s $HOME/.vim $XDG_CONFIG_HOME/nvim
 fi
+
 if [ ! -L "$XDG_CONFIG_HOME/nvim/init.vim" ]; then
   ln -s $HOME/.vimrc $XDG_CONFIG_HOME/nvim/init.vim
 fi
