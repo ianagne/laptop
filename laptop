@@ -94,6 +94,7 @@ tap "caskroom/cask"
 tap "neovim/neovim"
 
 # Unix
+brew "chromedriver"
 brew "ctags"
 brew "git"
 brew "openssl"
