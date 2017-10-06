@@ -63,7 +63,6 @@ gem_install_or_update() {
     gem update "$@"
   else
     gem install "$@"
-    rbenv rehash
   fi
 }
 
@@ -85,55 +84,15 @@ if brew list | grep -Fq brew-cask; then
   brew uninstall --force brew-cask
 fi
 
-fancy_echo "Updating Homebrew formulae ..."
-brew update
-brew bundle --file=- <<EOF
-tap "thoughtbot/formulae"
-tap "homebrew/services"
-tap "caskroom/cask"
-tap "neovim/neovim"
-
-# Unix
-brew "chromedriver"
-brew "ctags"
-brew "git"
-brew "openssl"
-brew "rcm"
-brew "reattach-to-user-namespace"
-brew "the_silver_searcher"
-brew "tmux"
-brew "neovim"
-brew "zsh"
-brew "zsh-syntax-highlighting"
-cask "dockertoolbox"
-
-# GitHub
-brew "hub"
-
-# Image manipulation
-brew "imagemagick"
-
-# Testing
-brew "qt"
-
-# Programming languages
-brew "libyaml" # should come after openssl
-brew "node"
-brew "rbenv"
-brew "ruby-build"
-brew "erlang"
-brew "pyenv"
-
-# Databases
-brew "postgres", restart_service: true
-brew "redis", restart_service: true
-EOF
-
 fancy_echo "Setting up dotfiles ..."
 
 if [ ! -d "$HOME/.dotfiles/" ]; then
   git clone git@github.com:ianagne/dotfiles.git $HOME/.dotfiles
 fi
+
+fancy_echo "Updating Homebrew formulae ..."
+brew update
+brew bundle --file="~/Brewfile"
 
 rcup
 
@@ -148,36 +107,57 @@ if [ ! -L "$XDG_CONFIG_HOME/nvim/init.vim" ]; then
   ln -s $HOME/.vimrc $XDG_CONFIG_HOME/nvim/init.vim
 fi
 
-fancy_echo "Configuring Ruby ..."
-find_latest_ruby() {
-  rbenv install -l | grep -v - | tail -1 | sed -e 's/^ *//'
-}
-
-ruby_version="$(find_latest_ruby)"
-# shellcheck disable=SC2016
-append_to_zshrc 'eval "$(rbenv init - --no-rehash)"' 1
-eval "$(rbenv init -)"
-if ! rbenv versions | grep -Fq "$ruby_version"; then
-  RUBY_CONFIGURE_OPTS=--with-openssl-dir=/usr/local/opt/openssl rbenv install -s "$ruby_version"
+fancy_echo "Configuring asdf version manager..."
+if [ ! -d "$HOME/.asdf" ]; then
+  git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.3.0
+  append_to_zshrc "source $HOME/.asdf/asdf.sh" 1
 fi
 
-rbenv global "$ruby_version"
-rbenv shell "$ruby_version"
+install_asdf_plugin() {
+  local name="$1"
+  local url="$2"
+
+  if ! asdf plugin-list | grep -Fq "$name"; then
+    asdf plugin-add "$name" "$url"
+  fi
+}
+
+# shellcheck disable=SC1090
+source "$HOME/.asdf/asdf.sh"
+install_asdf_plugin "ruby" "https://github.com/asdf-vm/asdf-ruby.git"
+install_asdf_plugin "nodejs" "https://github.com/asdf-vm/asdf-nodejs.git"
+install_asdf_plugin "python" "https://github.com/tuvistavie/asdf-python.git"
+install_asdf_plugin "erlang" "https://github.com/asdf-vm/asdf-erlang.git"
+install_asdf_plugin "elixir" "https://github.com/asdf-vm/asdf-elixir.git"
+
+install_asdf_language() {
+  local language="$1"
+  local version
+  version="$(asdf list-all "$language" | tail -1)"
+
+  if ! asdf list "$language" | grep -Fq "$version"; then
+    asdf install "$language" "$version"
+    asdf global "$language" "$version"
+  fi
+}
+
+fancy_echo "Installing latest Ruby..."
+install_asdf_language "ruby"
 gem update --system
-gem_install_or_update 'bundler'
-gem_install_or_update 'neovim'
+gem_install_or_update "bundler"
 number_of_cores=$(sysctl -n hw.ncpu)
 bundle config --global jobs $((number_of_cores - 1))
 
-fancy_echo "Configuring Python ..."
-find_latest_python() {
-  pyenv install -l | grep -v - | tail -1 | sed -e 's/^ *//'
-}
-python_version="$(find_latest_python)"
-append_to_zshrc 'eval "$(pyenv init -)"'
-eval "$(pyenv init -)"
-if ! pyenv versions | grep -Fq "$python_version"; then
-  pyenv install "$python_version"
-fi
-pyenv global "$python_version"
-pyenv shell "$python_version"
+fancy_echo "Installing latest Node..."
+bash "$HOME/.asdf/plugins/nodejs/bin/import-release-team-keyring"
+install_asdf_language "nodejs"
+
+fancy_echo "Installing latest Python..."
+install_asdf_language "python"
+
+fancy_echo "Installing latest Erlang..."
+install_asdf_language "erlang"
+
+fancy_echo "Installing latest Elixir..."
+install_asdf_language "elixir"
+asdf reshim elixir
