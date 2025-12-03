@@ -1,0 +1,46 @@
+{
+  "model": "sonnet",
+  "permissions": [
+    {
+      "pattern": "Bash(npm run test:*)",
+      "action": "allow",
+      "comment": "Auto-allow test commands"
+    },
+    {
+      "pattern": "Bash(npm run lint:*)",
+      "action": "allow",
+      "comment": "Auto-allow linting"
+    },
+    {
+      "pattern": "Bash(git commit:*)",
+      "action": "ask",
+      "comment": "Always confirm git commits"
+    },
+    {
+      "pattern": "Bash(git push:*)",
+      "action": "ask",
+      "comment": "Always confirm git pushes"
+    },
+    {
+      "pattern": "Bash(rm:*)",
+      "action": "deny",
+      "comment": "Block dangerous file deletions - use Edit/Write tools instead"
+    },
+    {
+      "pattern": "Bash(sudo:*)",
+      "action": "deny",
+      "comment": "Block sudo commands"
+    }
+  ],
+  "environment": {
+    "NODE_ENV": "development"
+  },
+  "hooks": {
+    "PostToolUse": {
+      "Edit": "~/.dotfiles/claude/hooks/post-edit.sh",
+      "Write": "~/.dotfiles/claude/hooks/post-write.sh"
+    },
+    "Stop": "~/.dotfiles/claude/hooks/notification.sh"
+  },
+  "plugins": []
+}

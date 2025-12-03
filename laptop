@@ -159,3 +159,38 @@ install_asdf_language "erlang"
 fancy_echo "Installing latest Elixir..."
 install_asdf_language "elixir"
 asdf reshim elixir
+
+fancy_echo "Setting up Claude Code..."
+
+# Ensure Claude Code is installed via Homebrew
+if ! command -v claude >/dev/null; then
+  fancy_echo "Claude Code not found. Install it with: brew install --cask claude-code"
+else
+  # Create global .claude directory
+  if [ ! -d "$HOME/.claude" ]; then
+    mkdir -p "$HOME/.claude"
+  fi
+
+  # Symlink Claude Code settings from dotfiles
+  if [ -f "$HOME/.dotfiles/claude/settings.json" ] && [ ! -f "$HOME/.claude/settings.json" ]; then
+    ln -s "$HOME/.dotfiles/claude/settings.json" "$HOME/.claude/settings.json"
+  fi
+
+  # Symlink CLAUDE.md if it exists
+  if [ -f "$HOME/.dotfiles/claude/CLAUDE.md" ] && [ ! -f "$HOME/.claude/CLAUDE.md" ]; then
+    ln -s "$HOME/.dotfiles/claude/CLAUDE.md" "$HOME/.claude/CLAUDE.md"
+  fi
+
+  # Symlink custom commands directory
+  if [ -d "$HOME/.dotfiles/claude/commands" ] && [ ! -d "$HOME/.claude/commands" ]; then
+    ln -s "$HOME/.dotfiles/claude/commands" "$HOME/.claude/commands"
+  fi
+
+  # Symlink hooks directory if it exists
+  if [ -d "$HOME/.dotfiles/claude/hooks" ] && [ ! -d "$HOME/.claude/hooks" ]; then
+    ln -s "$HOME/.dotfiles/claude/hooks" "$HOME/.claude/hooks"
+  fi
+
+  fancy_echo "Claude Code configuration linked from dotfiles"
+  fancy_echo "To configure MCP servers, run: claude /mcp"
+fi
