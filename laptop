@@ -163,3 +163,7 @@ asdf reshim elixir
 
 fancy_echo "Installing latest Node.js..."
 install_asdf_language "nodejs"
+
+# Install npm global packages
+
+ npm install -g agent-browser # agent-browser, headless browser automation CLI for AI agents
