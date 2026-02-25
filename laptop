@@ -164,6 +164,9 @@ asdf reshim elixir
 fancy_echo "Installing latest Node.js..."
 install_asdf_language "nodejs"
 
+fancy_echo "Installing latest Bun..."
+curl -fsSL https://bun.sh/install | bash
+
 # Install npm global packages
 
  npm install -g agent-browser # agent-browser, headless browser automation CLI for AI agents
