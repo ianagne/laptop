@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# No services or authentication to restore. Dependencies live in the snapshot.
+if ! command -v shellcheck >/dev/null 2>&1; then
+  printf 'ShellCheck is missing; run .agents/setup to repair this orb.\n' >&2
+  exit 1
+fi

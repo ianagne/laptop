@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Prepare tools for editing the macOS script, never run ./laptop on Debian.
+SECONDS=0
+if ! command -v shellcheck >/dev/null 2>&1; then
+  printf 'Installing ShellCheck...\n'
+  sudo apt-get update
+  sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends shellcheck
+else
+  printf 'ShellCheck is already installed; skipping apt.\n'
+fi
+
+shellcheck --version
+printf 'Orb setup finished in %ss.\n' "$SECONDS"
