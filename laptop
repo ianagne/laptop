@@ -66,24 +66,31 @@ case "$SHELL" in
 esac
 
 gem_install_or_update() {
-  if gem list "$1" --installed >/dev/null; then
-    gem update "$@"
+  if mise exec -- gem list "$1" --installed >/dev/null; then
+    mise exec -- gem update "$@"
   else
-    gem install "$@"
+    mise exec -- gem install "$@"
   fi
 }
 
-if ! command -v brew >/dev/null; then
+brew="$(command -v brew || true)"
+if [ -z "$brew" ]; then
+  brew="$HOMEBREW_PREFIX/bin/brew"
+fi
+
+if [ ! -x "$brew" ]; then
   fancy_echo "Installing Homebrew ..."
   /bin/bash -c \
     "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
 
-  append_to_zshrc '# recommended by brew doctor'
+# Initialize this setup process even when Homebrew was already installed.
+eval "$("$brew" shellenv sh)"
 
-  # shellcheck disable=SC2016
-  append_to_zshrc 'export PATH="/usr/local/bin:$PATH"' 1
-
-  export PATH="/usr/local/bin:$PATH"
+# Dotfiles load this after their own PATH setup, and rcup does not replace it.
+brew_init="eval \"\$(\"$brew\" shellenv zsh)\""
+if ! grep -Fqs "$brew_init" "$HOME/.zshrc.local"; then
+  printf '\n%s\n' "$brew_init" >>"$HOME/.zshrc.local"
 fi
 
 if brew list | grep -Fq brew-cask; then
@@ -99,9 +106,10 @@ fi
 
 fancy_echo "Updating Homebrew formulae ..."
 brew update
-brew bundle --file="~/.dotfiles/Brewfile"
+brew bundle --file="$HOME/.dotfiles/Brewfile"
 
-rcup
+# Load the repository's copy/exclude rules even before ~/.rcrc exists.
+RCRC="$HOME/.dotfiles/rcrc" rcup
 
 fancy_echo "Symlinking neovim configuration ..."
 
@@ -114,59 +122,36 @@ if [ ! -e "$XDG_CONFIG_HOME/nvim/init.lua" ]; then
   ln -s $HOME/.init.lua $XDG_CONFIG_HOME/nvim/init.lua
 fi
 
-fancy_echo "Configuring asdf version manager..."
-if [ ! -d "$HOME/.asdf" ]; then
-  git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.3.0
-fi
+fancy_echo "Configuring mise version manager..."
+# The dotfiles Brewfile installs mise. Run from HOME so the caller's project
+# configuration cannot select runtimes for machine setup.
+cd "$HOME"
 
-install_asdf_plugin() {
-  local name="$1"
-  local url="$2"
-
-  if ! asdf plugin-list | grep -Fq "$name"; then
-    asdf plugin-add "$name" "$url"
-  fi
-}
-
-# shellcheck disable=SC1090
-source "$HOME/.asdf/asdf.sh"
-install_asdf_plugin "ruby" "https://github.com/asdf-vm/asdf-ruby.git"
-install_asdf_plugin "python" "https://github.com/tuvistavie/asdf-python.git"
-install_asdf_plugin "erlang" "https://github.com/asdf-vm/asdf-erlang.git"
-install_asdf_plugin "elixir" "https://github.com/asdf-vm/asdf-elixir.git"
-install_asdf_plugin "nodejs" "https://github.com/asdf-vm/asdf-nodejs.git"
-
-install_asdf_language() {
-  local language="$1"
-  local version
-  version="$(asdf list-all "$language" | tail -1)"
-
-  if ! asdf list "$language" | grep -Fq "$version"; then
-    asdf install "$language" "$version"
-    asdf global "$language" "$version"
-  fi
-}
+# Preserve asdf's legacy_version_file behavior without managing mise's writable
+# global tool configuration through rcm.
+for language in ruby python node elixir; do
+  mise settings add idiomatic_version_file_enable_tools "$language"
+done
 
 fancy_echo "Installing latest Ruby..."
-install_asdf_language "ruby"
-gem update --system
+mise use --global --pin ruby@latest
+mise exec -- gem update --system
 gem_install_or_update "bundler"
 number_of_cores=$(sysctl -n hw.ncpu)
-bundle config --global jobs $((number_of_cores - 1))
+mise exec -- bundle config set --global jobs $((number_of_cores - 1))
 
 fancy_echo "Installing latest Erlang..."
-install_asdf_language "erlang"
+mise use --global --pin erlang@latest
 
 fancy_echo "Installing latest Elixir..."
-install_asdf_language "elixir"
-asdf reshim elixir
+mise use --global --pin elixir@latest
 
 fancy_echo "Installing latest Node.js..."
-install_asdf_language "nodejs"
+mise use --global --pin node@latest
 
 fancy_echo "Installing latest Bun..."
 curl -fsSL https://bun.sh/install | bash
 
 # Install npm global packages
 
- npm install -g agent-browser # agent-browser, headless browser automation CLI for AI agents
+mise exec -- npm install -g agent-browser # headless browser automation CLI for AI agents
